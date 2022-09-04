@@ -1,8 +1,13 @@
--- ##################################################### --
--- ################# DATABASE & TABLES ################# --
--- ##################################################### --
+-- ############################################ --
+-- ################# DATABASE ################# --
+-- ############################################ --
 
 CREATE DATABASE IF NOT EXISTS cinema CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci;
+
+
+-- ########################################## --
+-- ################# TABLES ################# --
+-- ########################################## --
 
 CREATE TABLE user (
 	id_user INTEGER(11) PRIMARY KEY AUTO_INCREMENT NOT NULL,
@@ -14,15 +19,15 @@ CREATE TABLE user (
 ) engine=INNODB;
 
 CREATE TABLE administrator (
-	id_admin INTEGER(11) PRIMARY KEY AUTO_INCREMENT NOT NULL,
-  user_id INTEGER(11) NOT NULL,
-  FOREIGN KEY (user_id) REFERENCES user(id_user)
+  id_admin INTEGER(11) PRIMARY KEY AUTO_INCREMENT NOT NULL,
+  user_id INTEGER(11) NOT NULL
+  -- CONSTRAINT FK_AdminUser FOREIGN KEY (user_id) REFERENCES user(id_user) ON UPDATE CASCADE ON DELETE CASCADE
 ) engine=INNODB;
 
 CREATE TABLE customer (
 	id_customer INTEGER(11) PRIMARY KEY AUTO_INCREMENT NOT NULL,
-  user_id INTEGER(11) NOT NULL,
-  FOREIGN KEY (user_id) REFERENCES user(id_user)
+  user_id INTEGER(11) NOT NULL
+  -- CONSTRAINT FK_CustomerUser FOREIGN KEY (user_id) REFERENCES user(id_user) ON UPDATE CASCADE ON DELETE CASCADE
 ) engine=INNODB;
 
 CREATE TABLE theater (
@@ -30,16 +35,16 @@ CREATE TABLE theater (
   Name VARCHAR(20) NOT NULL,
   Address VARCHAR(50) NOT NULL,
   Telephone VARCHAR(20) NOT NULL,
-  admin_id INTEGER(11) NOT NULL,
-  FOREIGN KEY (admin_id) REFERENCES administrator(id_admin)
+  admin_id INTEGER(11) NOT NULL
+  -- CONSTRAINT FK_TheaterAdmin FOREIGN KEY (admin_id) REFERENCES administrator(id_admin) ON UPDATE CASCADE ON DELETE CASCADE
 ) engine=INNODB;
 
 CREATE TABLE room (
 	id_room INTEGER(11) PRIMARY KEY AUTO_INCREMENT NOT NULL,
   NumberOrName varchar(20),
-  SeatQtyMax INTEGER(11) NOT NULL,
-  theater_id INTEGER(11) NOT NULL,
-  FOREIGN KEY (theater_id) REFERENCES theater(id_theater)
+  SeatQtyMax INTEGER(11) NOT NULL DEFAULT 200,
+  theater_id INTEGER(11) NOT NULL
+  -- CONSTRAINT FK_RoomTheater FOREIGN KEY (theater_id) REFERENCES theater(id_theater) ON UPDATE CASCADE ON DELETE CASCADE
 ) engine=INNODB;
 
 CREATE TABLE movie (
@@ -53,9 +58,9 @@ CREATE TABLE showing (
   Date DATE NOT NULL,
   Time TIME NOT NULL,
   room_id INTEGER(11) NOT NULL,
-  movie_id INTEGER(11) NOT NULL,
-  FOREIGN KEY (room_id) REFERENCES room(id_room),
-  FOREIGN KEY (movie_id) REFERENCES movie(id_movie)
+  movie_id INTEGER(11) NOT NULL
+  -- CONSTRAINT FK_ShowingRoom FOREIGN KEY (room_id) REFERENCES room(id_room) ON UPDATE CASCADE ON DELETE CASCADE,
+  -- CONSTRAINT FK_ShowingMovie FOREIGN KEY (movie_id) REFERENCES movie(id_movie) ON UPDATE CASCADE ON DELETE CASCADE
 ) engine=INNODB;
 
 CREATE TABLE price (
@@ -70,10 +75,10 @@ CREATE TABLE reservation (
   PaymentType VARCHAR(20) NOT NULL,
   price_id INTEGER(11) NOT NULL,
   showing_id INTEGER(11) NOT NULL,
-  customer_id INTEGER(11) NOT NULL,
-  FOREIGN KEY (price_id) REFERENCES price(id_price),
-  FOREIGN KEY (showing_id) REFERENCES showing(id_showing),
-  FOREIGN KEY (customer_id) REFERENCES customer(id_customer)
+  customer_id INTEGER(11) NOT NULL
+  -- CONSTRAINT FK_ReservationPrice FOREIGN KEY (price_id) REFERENCES price(id_price) ON UPDATE CASCADE ON DELETE CASCADE,
+  -- CONSTRAINT FK_ReservationShowing FOREIGN KEY (showing_id) REFERENCES showing(id_showing) ON UPDATE CASCADE ON DELETE CASCADE,
+  -- CONSTRAINT FK_ReservationCustomer FOREIGN KEY (customer_id) REFERENCES customer(id_customer) ON UPDATE CASCADE ON DELETE CASCADE
 ) engine=INNODB;
 
 
@@ -81,6 +86,49 @@ CREATE TABLE reservation (
 -- ################################################ --
 -- ################# CONSTRAINTES ################# --
 -- ################################################ --
+-- could add the constraints in the creation table also
+ALTER TABLE administrator
+ADD CONSTRAINT FK_AdminUser FOREIGN KEY (user_id) REFERENCES user(id_user) ON UPDATE CASCADE ON DELETE CASCADE;
+
+ALTER TABLE customer
+ADD CONSTRAINT FK_CustomerUser FOREIGN KEY (user_id) REFERENCES user(id_user) ON UPDATE CASCADE ON DELETE CASCADE;
+
+ALTER TABLE theater
+ADD CONSTRAINT FK_TheaterAdmin FOREIGN KEY (admin_id) REFERENCES administrator(id_admin) ON UPDATE CASCADE ON DELETE CASCADE;
+
+ALTER TABLE room
+ADD CONSTRAINT FK_RoomTheater FOREIGN KEY (theater_id) REFERENCES theater(id_theater) ON UPDATE CASCADE ON DELETE CASCADE;
+
+ALTER TABLE showing
+ADD CONSTRAINT FK_ShowingRoom FOREIGN KEY (room_id) REFERENCES room(id_room) ON UPDATE CASCADE ON DELETE CASCADE,
+ADD CONSTRAINT FK_ShowingMovie FOREIGN KEY (movie_id) REFERENCES movie(id_movie) ON UPDATE CASCADE ON DELETE CASCADE;
+
+ALTER TABLE reservation
+ADD CONSTRAINT FK_ReservationPrice FOREIGN KEY (price_id) REFERENCES price(id_price) ON UPDATE CASCADE ON DELETE CASCADE,
+ADD CONSTRAINT FK_ReservationShowing FOREIGN KEY (showing_id) REFERENCES showing(id_showing) ON UPDATE CASCADE ON DELETE CASCADE,
+ADD CONSTRAINT FK_ReservationCustomer FOREIGN KEY (customer_id) REFERENCES customer(id_customer) ON UPDATE CASCADE ON DELETE CASCADE;
+
+
+-- ############################################## --
+-- ################# PRIVILEGES ################# --
+-- ############################################## --
+CREATE USER 'admin'@'localhost' IDENTIFIED BY 'password';
+CREATE USER 'manager'@'localhost' IDENTIFIED BY 'password';
+CREATE USER 'lambda'@'localhost' IDENTIFIED BY 'password';
+
+GRANT ALL PRIVILEGES ON cinema.* TO 'admin'@'localhost';
+
+GRANT SELECT (`Date`, `Time`, `room_id`, `movie_id`), INSERT (`Date`, `Time`, `room_id`, `movie_id`), UPDATE (`Date`, `Time`, `room_id`, `movie_id`), DELETE ON cinema.showing TO 'manager'@'localhost';
+GRANT SELECT (`Title`, `Language`), INSERT (`Title`, `Language`), UPDATE (`Title`, `Language`), DELETE ON cinema.movie TO 'manager'@'localhost';
+
+GRANT SELECT ON cinema.* TO 'lambda'@'localhost';
+
+-- SHOW GRANTS FOR 'admin'@'localhost';
+-- SHOW GRANTS FOR 'manager'@'localhost';
+-- SHOW GRANTS FOR 'lambda'@'localhost';
+-- REVOKE ALL PRIVILEGES ON *.* FROM 'admin'@'localhost';
+-- REVOKE ALL PRIVILEGES ON *.* FROM 'manager'@'localhost';
+-- REVOKE ALL PRIVILEGES ON *.* FROM 'lambda'@'localhost';
 
 
 
@@ -272,4 +320,3 @@ insert into reservation (id_reservation, PaymentType, price_id, showing_id, cust
 insert into reservation (id_reservation, PaymentType, price_id, showing_id, customer_id) values (48, 'online', 3, 6, 5);
 insert into reservation (id_reservation, PaymentType, price_id, showing_id, customer_id) values (49, 'online', 1, 15, 14);
 insert into reservation (id_reservation, PaymentType, price_id, showing_id, customer_id) values (50, 'online', 2, 20, 24);
-
